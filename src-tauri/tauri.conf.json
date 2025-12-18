@@ -3,7 +3,7 @@
     "productName": "Rclone UI",
     "mainBinaryName": "Rclone UI",
     "version": "3.1.2",
-    "identifier": "com.rclone.ui",
+    "identifier": "bio.jas.rclone-ui",
     "build": {
         "frontendDist": "../dist",
         "devUrl": "http://localhost:1420",
@@ -36,7 +36,14 @@
     },
     "bundle": {
         "active": true,
-        "targets": ["nsis", "dmg", "app", "appimage", "deb", "rpm"],
+        "targets": [
+            "nsis",
+            "dmg",
+            "app",
+            "appimage",
+            "deb",
+            "rpm"
+        ],
         "icon": [
             "icons/32x32.png",
             "icons/128x128.png",
@@ -44,7 +51,9 @@
             "icons/icon.icns",
             "icons/icon.ico"
         ],
-        "resources": ["icons/favicon/*"],
+        "resources": [
+            "icons/favicon/*"
+        ],
         "shortDescription": "Cross-platform GUI for rclone & S3",
         "longDescription": "Cross-platform GUI for rclone & S3",
         "license": "Apache-2.0",
@@ -78,13 +87,17 @@
         },
         "linux": {
             "deb": {
-                "depends": ["libayatana-appindicator3-1 | libappindicator3-1"],
+                "depends": [
+                    "libayatana-appindicator3-1 | libappindicator3-1"
+                ],
                 "files": {
                     "/usr/share/flatpak.metainfo.xml": "flatpak.metainfo.xml"
                 }
             },
             "rpm": {
-                "depends": ["(libappindicator-gtk3 or libayatana-appindicator-gtk3)"]
+                "depends": [
+                    "(libappindicator-gtk3 or libayatana-appindicator-gtk3)"
+                ]
             }
         },
         "createUpdaterArtifacts": true
@@ -98,7 +111,9 @@
         },
         "deep-link": {
             "desktop": {
-                "schemes": ["rclone"]
+                "schemes": [
+                    "rclone"
+                ]
             }
         },
         "fs": {

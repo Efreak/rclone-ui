@@ -14,7 +14,7 @@ import { defaultOptions } from 'tauri-plugin-sentry-api'
 import { getDeepLinkUrl, handleDeepLinkUrl } from './lib/deep'
 import { isDirectoryEmpty } from './lib/fs'
 import { LOCAL_HOST_ID, getHostInfo } from './lib/hosts'
-import { validateLicense } from './lib/license'
+
 import notify from './lib/notify'
 import queryClient from './lib/query'
 import {
@@ -62,7 +62,7 @@ function forwardConsole(
                 `${message} ${args?.map((arg) => (typeof arg === 'string' ? arg : JSON.stringify(arg))).join(' ')}`
             )
         }
-    } catch {}
+    } catch { }
 }
 
 try {
@@ -159,47 +159,7 @@ async function checkHostReachability(): Promise<void> {
     console.log('[checkHostReachability] host is reachable')
 }
 
-async function validateInstance() {
-    console.log('[validateInstance] validating license')
 
-    const licenseKey = usePersistedStore.getState().licenseKey
-    if (!licenseKey) {
-        console.log('[validateInstance] no license key, skipping license validation')
-        usePersistedStore.setState({ licenseValid: false })
-        return
-    }
-
-    if (!navigator.onLine) {
-        console.log('[validateInstance] not online, skipping license validation')
-        return
-    }
-
-    try {
-        await validateLicense(licenseKey)
-    } catch (e) {
-        console.log('[validateInstance] error validating license, marking as invalid')
-        usePersistedStore.setState({ licenseValid: false })
-
-        if (e instanceof Error) {
-            await message(e.message, {
-                title: 'Error Validating License',
-                kind: 'error',
-                okLabel: 'OK',
-            })
-            console.log('[validateInstance] error message displayed, returning')
-            return
-        }
-
-        await message('An error occurred while validating your license. Please try again.', {
-            title: 'Error',
-            kind: 'error',
-            okLabel: 'OK',
-        })
-        console.log('[validateInstance] default error message displayed, returning')
-    } finally {
-        console.log('[validateInstance] license validation complete')
-    }
-}
 
 async function checkAlreadyRunning() {
     console.log('[checkAlreadyRunning]')
@@ -967,7 +927,7 @@ waitForHydration()
     .then(() => initializeHostStore())
     .then(() => checkHostReachability())
     .then(() => checkVersion())
-    .then(() => validateInstance())
+
     .then(() => checkAlreadyRunning())
     .then(() => startRclone())
     .then(() => checkRclone())

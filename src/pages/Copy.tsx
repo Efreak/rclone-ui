@@ -34,7 +34,7 @@ import { startCopy } from '../../lib/rclone/api'
 import { RCLONE_CONFIG_DEFAULTS } from '../../lib/rclone/constants'
 import { openWindow } from '../../lib/window'
 import { useHostStore } from '../../store/host'
-import { usePersistedStore } from '../../store/persisted'
+
 import type { FlagValue } from '../../types/rclone'
 import CommandInfoButton from '../components/CommandInfoButton'
 import CommandsDropdown from '../components/CommandsDropdown'
@@ -122,9 +122,7 @@ export default function Copy() {
                 throw new Error('Please select both a source and destination path')
             }
 
-            if (sources.length > 1 && !usePersistedStore.getState().licenseValid) {
-                throw new Error('You need a valid license to schedule multiple tasks at once')
-            }
+
 
             if (!cronExpression) {
                 throw new Error('Please enter a cron expression')

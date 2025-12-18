@@ -33,7 +33,7 @@ import { promptForConfigPassword, restartActiveRclone } from '../../../lib/rclon
 import rclone from '../../../lib/rclone/client'
 import { getConfigPath } from '../../../lib/rclone/common'
 import { useHostStore } from '../../../store/host'
-import { usePersistedStore } from '../../../store/persisted'
+
 import type { ConfigFile } from '../../../types/config'
 import ConfigCreateDrawer from '../../components/ConfigCreateDrawer'
 import ConfigEditDrawer from '../../components/ConfigEditDrawer'
@@ -41,7 +41,7 @@ import ConfigSyncDrawer from '../../components/ConfigSyncDrawer'
 import BaseSection from './BaseSection'
 
 export default function ConfigSection() {
-    const licenseValid = usePersistedStore((state) => state.licenseValid)
+
 
     const configFiles = useHostStore((state) => state.configFiles)
     const activeConfigFile = useHostStore((state) => state.activeConfigFile)
@@ -378,16 +378,7 @@ export default function ConfigSection() {
                                     if (key === 'import') {
                                         setIsCreateDrawerOpen(true)
                                     } else {
-                                        if (!licenseValid) {
-                                            await message(
-                                                'Community version does not support syncing configs.\n\nIf you do not wish to update it outside of Rclone UI, you can simply import.',
-                                                {
-                                                    title: 'Missing license',
-                                                    kind: 'error',
-                                                }
-                                            )
-                                            return
-                                        }
+
                                         setIsSyncDrawerOpen(true)
                                     }
                                 }, 100)
@@ -578,15 +569,15 @@ function ConfigCard({
                                                 setPasswordMutation.variables === configFile.id) ||
                                             (removePasswordMutation.isPending &&
                                                 removePasswordMutation.variables ===
-                                                    configFile.id) ||
+                                                configFile.id) ||
                                             (savePasswordMutation.isPending &&
                                                 savePasswordMutation.variables === configFile.id) ||
                                             (savePasswordCommandMutation.isPending &&
                                                 savePasswordCommandMutation.variables ===
-                                                    configFile.id) ||
+                                                configFile.id) ||
                                             (removeSavedPasswordMutation.isPending &&
                                                 removeSavedPasswordMutation.variables ===
-                                                    configFile.id)
+                                                configFile.id)
                                         }
                                     >
                                         <LockIcon className="w-5 h-5" />
@@ -646,8 +637,8 @@ function ConfigCard({
                                         Update Password
                                     </DropdownItem>
                                     {configFile.isEncrypted &&
-                                    !configFile.pass &&
-                                    !configFile.passCommand ? (
+                                        !configFile.pass &&
+                                        !configFile.passCommand ? (
                                         <DropdownItem
                                             key="save-password"
                                             startContent={<LockIcon className="size-4" />}
@@ -664,7 +655,7 @@ function ConfigCard({
                                         </DropdownItem>
                                     ) : null}
                                     {configFile.isEncrypted &&
-                                    (configFile.pass || configFile.passCommand) ? (
+                                        (configFile.pass || configFile.passCommand) ? (
                                         <DropdownItem
                                             key="remove-password"
                                             startContent={<LockIcon className="size-4" />}

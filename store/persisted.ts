@@ -60,21 +60,18 @@ interface PersistedStateV1 {
     setDisabledActions: (actions: SupportedAction[]) => void
 
     proxy:
-        | {
-              url: string
-              ignoredHosts: string[]
-          }
-        | undefined
+    | {
+        url: string
+        ignoredHosts: string[]
+    }
+    | undefined
 
     favoritePaths: { remote: string; path: string; added: number }[]
 
     settingsPass: string | undefined
     setSettingsPass: (pass: string | undefined) => void
 
-    licenseKey: string | undefined
-    setLicenseKey: (key: string | undefined) => void
-    licenseValid: boolean
-    setLicenseValid: (valid: boolean) => void
+
 
     startOnBoot: boolean
     setStartOnBoot: (startOnBoot: boolean) => void
@@ -111,10 +108,7 @@ interface PersistedStateV2 {
     settingsPass: string | undefined
     setSettingsPass: (pass: string | undefined) => void
 
-    licenseKey: string | undefined
-    setLicenseKey: (key: string | undefined) => void
-    licenseValid: boolean
-    setLicenseValid: (valid: boolean) => void
+
 
     startOnBoot: boolean
     setStartOnBoot: (startOnBoot: boolean) => void
@@ -162,10 +156,7 @@ export const usePersistedStore = create<PersistedStateV2>()(
             settingsPass: undefined,
             setSettingsPass: (pass: string | undefined) => set((_) => ({ settingsPass: pass })),
 
-            licenseKey: undefined,
-            setLicenseKey: (key: string | undefined) => set((_) => ({ licenseKey: key })),
-            licenseValid: false,
-            setLicenseValid: (valid: boolean) => set((_) => ({ licenseValid: valid })),
+
 
             startOnBoot: false,
             setStartOnBoot: (startOnBoot: boolean) => set((_) => ({ startOnBoot })),
@@ -235,13 +226,13 @@ export const usePersistedStore = create<PersistedStateV2>()(
                     const newRemoteConfigs: Record<string, HostRemoteConfig> = {}
                     const newTemplates: Template[] = legacyState.templates
                         ? [
-                              ...legacyState.templates.map((template) => ({
-                                  ...template,
-                                  tags: (template as unknown as TemplateV1).operation
-                                      ? [(template as unknown as TemplateV1).operation!]
-                                      : [],
-                              })),
-                          ]
+                            ...legacyState.templates.map((template) => ({
+                                ...template,
+                                tags: (template as unknown as TemplateV1).operation
+                                    ? [(template as unknown as TemplateV1).operation!]
+                                    : [],
+                            })),
+                        ]
                         : []
 
                     if (legacyState.remoteConfigList) {
@@ -372,8 +363,7 @@ export const usePersistedStore = create<PersistedStateV2>()(
 
                     return {
                         settingsPass: legacyState.settingsPass || undefined,
-                        licenseKey: legacyState.licenseKey || undefined,
-                        licenseValid: legacyState.licenseValid || false,
+
                         startOnBoot: legacyState.startOnBoot || false,
                         templates: newTemplates,
                         hideStartup: legacyState.hideStartup || false,
