@@ -907,6 +907,9 @@ export default function PathSelector({
                                                     })
                                                 }, 100)
                                             }}
+                                            onDoubleClick={() => {
+                                                onSelect?.([{ path: `${remote}:/`, type: 'folder' }])
+                                            }}
                                             isSelected={selectedRemote === remote}
                                         />
                                     ))}
@@ -1080,7 +1083,7 @@ export default function PathSelector({
                                                             </div>
                                                             <div className="truncate text-small text-default-500">
                                                                 {!entry.isDir &&
-                                                                typeof entry.size === 'number'
+                                                                    typeof entry.size === 'number'
                                                                     ? formatBytes(entry.size)
                                                                     : '—'}
                                                             </div>
@@ -1104,15 +1107,15 @@ export default function PathSelector({
                                                                                         ':/'
                                                                                     )
                                                                                         ? entry.fullPath
-                                                                                              .split(
-                                                                                                  ':/'
-                                                                                              )
-                                                                                              .slice(
-                                                                                                  1
-                                                                                              )
-                                                                                              .join(
-                                                                                                  '/'
-                                                                                              )
+                                                                                            .split(
+                                                                                                ':/'
+                                                                                            )
+                                                                                            .slice(
+                                                                                                1
+                                                                                            )
+                                                                                            .join(
+                                                                                                '/'
+                                                                                            )
                                                                                         : entry.fullPath
                                                                                 useHostStore.setState(
                                                                                     {
@@ -1158,8 +1161,8 @@ export default function PathSelector({
                                                                                                                 it as any
                                                                                                             )
                                                                                                                 .remote as
-                                                                                                                | string
-                                                                                                                | undefined
+                                                                                                            | string
+                                                                                                            | undefined
                                                                                                         const rawPath =
                                                                                                             (
                                                                                                                 it as any
@@ -1177,7 +1180,7 @@ export default function PathSelector({
                                                                                                         } else if (
                                                                                                             remote &&
                                                                                                             remote !==
-                                                                                                                'UI_LOCAL_FS'
+                                                                                                            'UI_LOCAL_FS'
                                                                                                         ) {
                                                                                                             const rel =
                                                                                                                 (
@@ -1449,8 +1452,8 @@ export default function PathSelector({
                                                         {selectedCount === 0
                                                             ? '0 SELECTED'
                                                             : allowMultiple
-                                                              ? `PICK (${selectedCount})`
-                                                              : 'PICK'}
+                                                                ? `PICK (${selectedCount})`
+                                                                : 'PICK'}
                                                     </Button>
                                                 </div>
                                             </Tooltip>
@@ -1469,8 +1472,14 @@ export default function PathSelector({
 function RemoteButton({
     remote,
     onSelect,
+    onDoubleClick,
     isSelected,
-}: { remote: string; onSelect: (remote: string) => void; isSelected: boolean }) {
+}: {
+    remote: string
+    onSelect: (remote: string) => void
+    onDoubleClick?: () => void
+    isSelected: boolean
+}) {
     const remoteConfigQuery = useQuery({
         queryKey: ['remote', remote, 'config'],
         queryFn: async () => {
@@ -1493,6 +1502,7 @@ function RemoteButton({
                 size="lg"
                 variant={isSelected ? 'faded' : 'light'}
                 onPress={() => onSelect(remote)}
+                onDoubleClick={onDoubleClick}
                 className="shrink-0"
             >
                 {/* <HardDriveIcon className="size-4" /> */}

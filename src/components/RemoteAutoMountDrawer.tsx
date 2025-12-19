@@ -2,7 +2,7 @@ import { Checkbox, cn } from '@heroui/react'
 import { Drawer, DrawerBody, DrawerContent, DrawerFooter, DrawerHeader } from '@heroui/react'
 import { Button, Input } from '@heroui/react'
 import { useMutation } from '@tanstack/react-query'
-import { homeDir } from '@tauri-apps/api/path'
+import { homeDir, join } from '@tauri-apps/api/path'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { message, open } from '@tauri-apps/plugin-dialog'
 import { platform } from '@tauri-apps/plugin-os'
@@ -47,32 +47,52 @@ export default function RemoteAutoMountDrawer({
     const [mountOnStartVfsOptionsJson, setMountOnStartVfsOptionsJson] = useState<string>('{}')
 
     useEffect(() => {
-        const remoteConfig = remoteConfigs[remoteName] || {}
+        const load = async () => {
+            const remoteConfig = remoteConfigs[remoteName] || {}
 
-        const mountOptionsJson = JSON.stringify(
-            remoteConfig?.mountOnStart?.mountOptions || {},
-            null,
-            2
-        )
-        const vfsOptionsJson = JSON.stringify(remoteConfig?.mountOnStart?.vfsOptions || {}, null, 2)
-        const filterOptionsJson = JSON.stringify(
-            remoteConfig?.mountOnStart?.filterOptions || {},
-            null,
-            2
-        )
-        const configOptionsJson = JSON.stringify(
-            remoteConfig?.mountOnStart?.configOptions || {},
-            null,
-            2
-        )
+            let mountOnStart = remoteConfig?.mountOnStart
 
-        startTransition(() => {
-            setConfig(remoteConfig)
-            setMountOnStartMountOptionsJson(mountOptionsJson)
-            setMountOnStartVfsOptionsJson(vfsOptionsJson)
-            setMountOnStartFilterOptionsJson(filterOptionsJson)
-            setMountOnStartConfigOptionsJson(configOptionsJson)
-        })
+            if (!mountOnStart) {
+                const home = await homeDir()
+                const defaultMountPoint = await join(home, 'Volumes', remoteName)
+                mountOnStart = {
+                    enabled: false,
+                    remotePath: `${remoteName}:`,
+                    mountPoint: defaultMountPoint,
+                    mountOptions: {},
+                    vfsOptions: {},
+                    filterOptions: {},
+                    configOptions: {},
+                }
+            }
+
+            const mountOptionsJson = JSON.stringify(
+                mountOnStart?.mountOptions || {},
+                null,
+                2
+            )
+            const vfsOptionsJson = JSON.stringify(mountOnStart?.vfsOptions || {}, null, 2)
+            const filterOptionsJson = JSON.stringify(
+                mountOnStart?.filterOptions || {},
+                null,
+                2
+            )
+            const configOptionsJson = JSON.stringify(
+                mountOnStart?.configOptions || {},
+                null,
+                2
+            )
+
+            startTransition(() => {
+                setConfig({ ...remoteConfig, mountOnStart })
+                setMountOnStartMountOptionsJson(mountOptionsJson)
+                setMountOnStartVfsOptionsJson(vfsOptionsJson)
+                setMountOnStartFilterOptionsJson(filterOptionsJson)
+                setMountOnStartConfigOptionsJson(configOptionsJson)
+            })
+        }
+
+        load()
     }, [remoteConfigs, remoteName])
 
     const updateMountOnStart = useCallback(
