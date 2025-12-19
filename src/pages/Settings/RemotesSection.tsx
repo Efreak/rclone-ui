@@ -12,19 +12,25 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { ask, message } from '@tauri-apps/plugin-dialog'
 import { platform } from '@tauri-apps/plugin-os'
 import {
+    AlertTriangleIcon,
     CableIcon,
+    CheckCircleIcon,
     PencilIcon,
+    PlayIcon,
     PlusIcon,
     RefreshCcwIcon,
     SettingsIcon,
+    SquareIcon,
     Trash2Icon,
 } from 'lucide-react'
 import { type ReactNode, startTransition, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { formatBytes } from '../../../lib/format'
+import { fetchMountList, startMount } from '../../../lib/rclone/api'
 import rclone from '../../../lib/rclone/client'
 import { SUPPORTS_ABOUT } from '../../../lib/rclone/constants'
-
+import { homeDir, join } from '@tauri-apps/api/path'
+import { useHostStore } from '../../../store/host'
 import RemoteAutoMountDrawer from '../../components/RemoteAutoMountDrawer'
 import RemoteCreateDrawer from '../../components/RemoteCreateDrawer'
 import RemoteEditDrawer from '../../components/RemoteEditDrawer'
@@ -120,7 +126,7 @@ export default function RemotesSection() {
             )
         }
 
-        if (remotesQuery.isLoading || remotesQuery.isRefetching) {
+        if (remotesQuery.isLoading) {
             return withRoot(<Spinner size="lg" color="primary" className="scale-150" />)
         }
 
@@ -142,7 +148,7 @@ export default function RemotesSection() {
         }
 
         return null
-    }, [remotesQuery.isLoading, remotesQuery.isRefetching, remotes.length, creatingDrawerOpen])
+    }, [remotesQuery.isLoading, remotes.length, creatingDrawerOpen])
 
     useEffect(() => {
         const tab = searchParams.get('tab')
@@ -185,7 +191,9 @@ export default function RemotesSection() {
                             size="sm"
                             isDisabled={remotesQuery.isRefetching}
                         >
-                            <RefreshCcwIcon className="w-4 h-4" />
+                            <RefreshCcwIcon
+                                className={`w-4 h-4 ${remotesQuery.isRefetching ? 'animate-spin' : ''}`}
+                            />
                         </Button>
                         <Button
                             onPress={() => {
@@ -309,6 +317,98 @@ function RemoteCard({
             })
         },
     })
+    const queryClient = useQueryClient()
+
+    const { data: mountList } = useQuery({
+        queryKey: ['mount', 'list'],
+        queryFn: fetchMountList,
+        refetchInterval: 5000,
+    })
+
+    const mountPoint = useMemo(
+        () => mountList?.find((m) => m.Fs === `${remote}:` || m.Fs === `${remote}:/`),
+        [mountList, remote]
+    )
+
+    const mountMutation = useMutation({
+        mutationFn: async () => {
+            const remoteConfig = useHostStore.getState().remoteConfigs[remote]
+            const mountOnStart = remoteConfig?.mountOnStart
+
+            let source = `${remote}:`
+            let destination = ''
+            let options = {}
+
+            if (mountOnStart?.remotePath && mountOnStart?.mountPoint) {
+                source = mountOnStart.remotePath
+                destination = mountOnStart.mountPoint
+                options = {
+                    mount: mountOnStart.mountOptions,
+                    vfs: mountOnStart.vfsOptions,
+                    filter: mountOnStart.filterOptions,
+                    config: mountOnStart.configOptions,
+                }
+            } else {
+                const home = await homeDir()
+                destination = await join(home, 'Volumes', remote)
+            }
+
+            await startMount({
+                source,
+                destination,
+                options
+            })
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['mount', 'list'] })
+            message(`Mounted ${remote}`, { title: 'Mount Started', kind: 'info' })
+        },
+        onError: async (error) => {
+            console.error('Failed to mount:', error)
+            await message(error instanceof Error ? error.message : 'Unknown error occurred', {
+                title: 'Mount Failed',
+                kind: 'error',
+            })
+        }
+    })
+
+    const unmountMutation = useMutation({
+        mutationFn: async () => {
+            if (!mountPoint) return
+            await rclone('/mount/unmount', {
+                params: {
+                    query: {
+                        mountPoint: mountPoint.MountPoint,
+                    },
+                },
+            })
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['mount', 'list'] })
+        },
+        onError: async (error) => {
+            console.error('Failed to unmount:', error)
+            await message(error instanceof Error ? error.message : 'Unknown error occurred', {
+                title: 'Unmount Failed',
+                kind: 'error',
+            })
+        }
+    })
+
+    const { isError: isStatusError, isLoading: isStatusLoading } = useQuery({
+        queryKey: ['remotes', remote, 'status'],
+        queryFn: async () => {
+            return await rclone('/operations/list', {
+                params: {
+                    query: {
+                        fs: `${remote}:`,
+                        remote: '',
+                    },
+                },
+            })
+        },
+        retry: false,
+    })
 
     const type = useMemo(() => remoteConfigData?.type ?? null, [remoteConfigData?.type])
     const provider = useMemo(() => remoteConfigData?.provider ?? null, [remoteConfigData?.provider])
@@ -325,7 +425,7 @@ function RemoteCard({
                 },
             })
         },
-        enabled: supportsAbout,
+        enabled: supportsAbout && !isStatusError,
     })
 
     console.log('about', remote, type, JSON.stringify(remoteAboutData, null, 2))
@@ -380,6 +480,32 @@ function RemoteCard({
                                 )}
                             </div>
                         )}
+
+                        {!isStatusLoading && !isStatusError && (
+                            <CheckCircleIcon className="w-5 h-5 text-success" />
+                        )}
+                        {isStatusError && <AlertTriangleIcon className="w-5 h-5 text-warning" />}
+
+                        <Button
+                            isIconOnly={true}
+                            radius="full"
+                            variant={mountPoint ? 'flat' : 'light'}
+                            color={mountPoint ? 'danger' : 'success'}
+                            isLoading={unmountMutation.isPending || mountMutation.isPending}
+                            onPress={() => {
+                                if (mountPoint) {
+                                    unmountMutation.mutate()
+                                } else {
+                                    mountMutation.mutate()
+                                }
+                            }}
+                        >
+                            {mountPoint ? (
+                                <SquareIcon className="size-6 fill-current" />
+                            ) : (
+                                <PlayIcon className="size-6 ml-0.5 fill-current" />
+                            )}
+                        </Button>
 
                         <Dropdown shadow={platform() === 'windows' ? 'none' : undefined}>
                             <DropdownTrigger>
