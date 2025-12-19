@@ -16,17 +16,6 @@ async function buildMenu() {
 
     const menuItems: (MenuItem | PredefinedMenuItem)[] = []
 
-    const onboardingMenuItem = await MenuItem.new({
-        id: 'onboarding',
-        text: 'Onboarding',
-        action: async () => {
-            await openSmallWindow({
-                name: 'Onboarding',
-                url: '/onboarding',
-            })
-        },
-    })
-    menuItems.push(onboardingMenuItem)
 
     const openMenuItem = await MenuItem.new({
         id: 'open',
