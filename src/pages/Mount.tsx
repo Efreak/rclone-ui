@@ -15,6 +15,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { message } from '@tauri-apps/plugin-dialog'
 import { openPath } from '@tauri-apps/plugin-opener'
 import { platform } from '@tauri-apps/plugin-os'
+import { homeDir, join } from '@tauri-apps/api/path'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     AlertOctagonIcon,
@@ -29,6 +30,7 @@ import {
 import { startTransition, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { getOptionsSubtitle } from '../../lib/flags'
+import { getFsInfo } from '../../lib/format'
 import { useFlags } from '../../lib/hooks'
 import { startMount } from '../../lib/rclone/api'
 import { RCLONE_CONFIG_DEFAULTS } from '../../lib/rclone/constants'
@@ -113,11 +115,28 @@ export default function Mount() {
 
     const startMountMutation = useMutation({
         mutationFn: async ({ dest, source }: { dest?: string; source?: string }) => {
-            if (!dest || !source) throw new Error('Destination and source are required')
+            if (!source) throw new Error('Source is required')
+
+            let finalDest = dest
+            if (!finalDest) {
+                const { remoteName, name, filePath } = getFsInfo(source)
+                let mountName = remoteName === ':local' ? name : remoteName
+
+                if (remoteName !== ':local' && filePath && filePath !== '/') {
+                    if (name && name !== remoteName) {
+                        mountName = `${remoteName}_${name}`
+                    }
+                }
+
+                finalDest = await join(await homeDir(), 'Volumes', mountName)
+                startTransition(() => {
+                    setDest(finalDest)
+                })
+            }
 
             await startMount({
                 source: source,
-                destination: dest,
+                destination: finalDest,
                 options: {
                     mount: mountOptions,
                     vfs: vfsOptions,
@@ -150,7 +169,7 @@ export default function Mount() {
     const buttonText = useMemo(() => {
         if (startMountMutation.isPending) return 'MOUNTING...'
         if (!source) return 'Please select a source path'
-        if (!dest) return 'Please select a destination path'
+        // if (!dest) return 'Please select a destination path' // dest is optional
         if (source === dest) return 'Source and destination cannot be the same'
         if (jsonError) return 'Invalid JSON for ' + jsonError.toUpperCase() + ' options'
         return 'START MOUNT'
@@ -158,7 +177,7 @@ export default function Mount() {
 
     const buttonIcon = useMemo(() => {
         if (startMountMutation.isPending || startMountMutation.isSuccess) return
-        if (!source || !dest || source === dest) return <FoldersIcon className="w-5 h-5" />
+        if (!source || source === dest) return <FoldersIcon className="w-5 h-5" />
         if (jsonError) return <AlertOctagonIcon className="w-4 h-4 mt-0.5" />
         return <PlayIcon className="w-4 h-4 fill-current" />
     }, [startMountMutation.isPending, startMountMutation.isSuccess, source, dest, jsonError])
@@ -185,8 +204,8 @@ export default function Mount() {
                     destOptions={{
                         label: 'Mount Point',
                         showPicker: true,
-                        placeholder: 'The local path to mount the remote to',
-                        clearable: false,
+                        placeholder: 'Optional: Leave empty to use default (e.g. ~/Volumes/remoteName)',
+                        clearable: true,
                         allowedKeys: ['LOCAL_FS'],
                         showFiles: false,
                     }}
@@ -436,8 +455,8 @@ export default function Mount() {
                                     startMountMutation.isPending ||
                                     !!jsonError ||
                                     !source ||
-                                    !dest ||
-                                    source === dest ||
+                                    // !dest || // dest is now optional
+                                    (dest && source === dest) ||
                                     startMountMutation.isSuccess
                                 }
                                 isLoading={startMountMutation.isPending}

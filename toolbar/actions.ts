@@ -3,7 +3,9 @@ import { getCurrentWindow } from '@tauri-apps/api/window'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
 import { ask, message } from '@tauri-apps/plugin-dialog'
 import { openUrl, revealItemInDir } from '@tauri-apps/plugin-opener'
+import { remove } from '@tauri-apps/plugin-fs'
 import notify from '../lib/notify'
+import { isDirectoryEmpty } from '../lib/fs'
 import queryClient from '../lib/query'
 import type { fetchMountList, fetchServeList } from '../lib/rclone/api'
 import rclone from '../lib/rclone/client'
@@ -399,11 +401,25 @@ const actions: ToolbarActionDefinition[] = [
                         }
                     )
                     await queryClient.resetQueries({ queryKey: ['mount', 'list'] })
+                } finally {
+                    try {
+                        const isEmpty = await isDirectoryEmpty(mountPoint)
+                        if (isEmpty) {
+                            await remove(mountPoint)
+                            console.log('[toolbar] removed empty mount point', mountPoint)
+                        }
+                    } catch (cleanupError) {
+                        console.error('[toolbar] failed to cleanup mount point', cleanupError)
+                    }
                 }
                 return
             }
 
             if (args._action === 'stop_all') {
+                const activeMounts = queryClient.getQueryData(['mount', 'list']) as
+                    | Awaited<ReturnType<typeof fetchMountList>>
+                    | undefined
+
                 const confirmed = await ask('Are you sure you want to unmount ALL paths?', {
                     title: 'Confirm Stop All',
                     kind: 'warning',
@@ -420,6 +436,20 @@ const actions: ToolbarActionDefinition[] = [
                         body: 'All mount instances have been unmounted',
                     })
                     queryClient.setQueryData(['mount', 'list'], [])
+
+                    if (activeMounts) {
+                        for (const mount of activeMounts) {
+                            try {
+                                const isEmpty = await isDirectoryEmpty(mount.MountPoint)
+                                if (isEmpty) {
+                                    await remove(mount.MountPoint)
+                                    console.log('[toolbar] removed empty mount point', mount.MountPoint)
+                                }
+                            } catch (cleanupError) {
+                                console.error('[toolbar] failed to cleanup mount point', mount.MountPoint, cleanupError)
+                            }
+                        }
+                    }
                 } catch (error) {
                     console.error('[toolbar] failed to stop all mounts', error)
                     await message(
@@ -1163,8 +1193,8 @@ export function getToolbarAction(id: ToolbarCommandId): ToolbarActionDefinition 
 type CommandConfig = typeof COMMAND_CONFIG
 type ConfiguredCommandId = {
     [K in keyof CommandConfig]: CommandConfig[K] extends { route: string; windowLabel: string }
-        ? K
-        : never
+    ? K
+    : never
 }[keyof CommandConfig]
 
 async function openCommandWindow(
