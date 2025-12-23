@@ -9,7 +9,7 @@ import { message } from '@tauri-apps/plugin-dialog'
 import { platform } from '@tauri-apps/plugin-os'
 import { exit } from '@tauri-apps/plugin-process'
 import { usePersistedStore } from '../store/persisted'
-import { openSmallWindow, openWindow } from './window'
+import { openWindow } from './window'
 
 async function buildMenu() {
     console.log('[buildMenu]')
